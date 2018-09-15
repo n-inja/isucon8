@@ -240,7 +240,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 
 	if sheets == nil {
 		sheets = make([]Sheet, 0)
-		rows, err := db.Query("SELECT * FROM sheets")
+		rows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
 		if err != nil {
 			return nil, err
 		}
