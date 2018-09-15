@@ -346,7 +346,7 @@ func main() {
 		return c.Render(200, "index.tmpl", echo.Map{
 			"events": events,
 			"user":   c.Get("user"),
-			"origin": "",
+			"origin": c.Scheme() + "://" + c.Request().Host,
 		})
 	}, fillinUser)
 	e.GET("/initialize", func(c echo.Context) error {
@@ -702,7 +702,7 @@ func main() {
 		return c.Render(200, "admin.tmpl", echo.Map{
 			"events":        events,
 			"administrator": administrator,
-			"origin":        "",
+			"origin":        c.Scheme() + "://" + c.Request().Host,
 		})
 	}, fillinAdministrator)
 	e.POST("/admin/api/actions/login", func(c echo.Context) error {
