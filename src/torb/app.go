@@ -348,6 +348,7 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		events, err := getEvents(false)
 		if err != nil {
+			fmt.Println(err)
 			return err
 		}
 		for i, v := range events {
