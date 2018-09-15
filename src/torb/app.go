@@ -17,12 +17,12 @@ import (
 	"strings"
 	"time"
 
-	_ "net/http/pprof"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/middleware"
+	_ "net/http/pprof"
 )
 
 type User struct {
@@ -235,37 +235,80 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		"C": &Sheets{},
 	}
 
-	rows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
+	rows, err := db.Query("SELECT * FROM reservations WHERE event_id = ? GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", event.ID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
 	for rows.Next() {
-		var sheet Sheet
-		if err := rows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+		var reservation Reservation
+		if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
 			return nil, err
+		}
+		var sheet Sheet
+		sheet.ID = reservation.SheetID
+		if sheet.ID <= 50 {
+			sheet.Rank = "S"
+			sheet.Num = sheet.ID
+			sheet.Price = 5000
+		} else if sheet.ID <= 150 {
+			sheet.Rank = "A"
+			sheet.Num = sheet.ID - 50
+			sheet.Price = 3000
+		} else if sheet.ID <= 500 {
+			sheet.Rank = "B"
+			sheet.Num = sheet.ID - 200
+			sheet.Price = 1000
+		} else {
+			sheet.Rank = "C"
+			sheet.Num = sheet.ID - 500
+			sheet.Price = 0
 		}
 		event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
 		event.Total++
 		event.Sheets[sheet.Rank].Total++
-
-		var reservation Reservation
-		err := db.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
-		if err == nil {
-			sheet.Mine = reservation.UserID == loginUserID
-			sheet.Reserved = true
-			sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
-		} else if err == sql.ErrNoRows {
+		if reservation.CanceledAt.IsZero() {
 			event.Remains++
 			event.Sheets[sheet.Rank].Remains++
 		} else {
-			return nil, err
+			sheet.Mine = reservation.UserID == loginUserID
+			sheet.Reserved = true
+			sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
 		}
-
 		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, &sheet)
 	}
+	/*
+		rows, err := db.Query("SELECT * FROM sheets ORDER BY `rank`, num")
+		if err != nil {
+			return nil, err
+		}
+		defer rows.Close()
 
+		for rows.Next() {
+			var sheet Sheet
+			if err := rows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
+				return nil, err
+			}
+			event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
+			event.Total++
+			event.Sheets[sheet.Rank].Total++
+
+			var reservation Reservation
+			err := db.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
+			if err == nil {
+				sheet.Mine = reservation.UserID == loginUserID
+				sheet.Reserved = true
+				sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
+			} else if err == sql.ErrNoRows {
+				event.Remains++
+				event.Sheets[sheet.Rank].Remains++
+			} else {
+				return nil, err
+			}
+
+			event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, &sheet)
+		}
+	*/
 	return &event, nil
 }
 
@@ -317,9 +360,10 @@ func main() {
 	}()
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
-		os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
+		/*os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
 		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"),
-		os.Getenv("DB_DATABASE"),
+		os.Getenv("DB_DATABASE"),*/
+		"root", "password", "localhost", "3306", "torb",
 	)
 
 	var err error
