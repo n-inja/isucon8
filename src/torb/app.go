@@ -346,7 +346,7 @@ func main() {
 		return c.Render(200, "index.tmpl", echo.Map{
 			"events": events,
 			"user":   c.Get("user"),
-			"origin": c.Scheme() + "://" + c.Request().Host,
+			"origin": "",
 		})
 	}, fillinUser)
 	e.GET("/initialize", func(c echo.Context) error {
