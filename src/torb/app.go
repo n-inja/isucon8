@@ -195,6 +195,7 @@ func getEvents(all bool) ([]*Event, error) {
 
 	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
+		fmt.Println("SELECT * FROM events ORDER BY id ASC")
 		return nil, err
 	}
 	defer rows.Close()
@@ -400,7 +401,7 @@ func main() {
 		})
 	}, fillinUser)
 	e.GET("/initialize", func(c echo.Context) error {
-		cmd := exec.Command("db/init.sh")
+		cmd := exec.Command("/home/isucon/isucon8/db/init.sh")
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		err := cmd.Run()
