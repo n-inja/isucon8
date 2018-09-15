@@ -198,7 +198,7 @@ func getEvents(all bool) ([]*Event, error) {
 	if all {
 		rows, err = tx.Query("SELECT * FROM events ORDER BY id ASC")
 	} else {
-		rows, err = tx.Query("SELECT * FROM events WHERE public_fg = false ORDER BY id ASC")
+		rows, err = tx.Query("SELECT * FROM events WHERE public_fg = true ORDER BY id ASC")
 	}
 
 	if err != nil {
