@@ -193,7 +193,14 @@ func getEvents(all bool) ([]*Event, error) {
 	}
 	defer tx.Commit()
 
-	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
+	var rows *sql.Rows
+
+	if all {
+		rows, err = tx.Query("SELECT * FROM events ORDER BY id ASC")
+	} else {
+		rows, err = tx.Query("SELECT * FROM events WHERE public_fg = false ORDER BY id ASC")
+	}
+
 	if err != nil {
 		fmt.Println("SELECT * FROM events ORDER BY id ASC")
 		return nil, err
