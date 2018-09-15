@@ -227,7 +227,6 @@ func getEvents(all bool) ([]*Event, error) {
 func getEvent(eventID, loginUserID int64) (*Event, error) {
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
-		fmt.Println("SELECT * FROM events WHERE id = ?")
 		return nil, err
 	}
 	event.Sheets = map[string]*Sheets{
@@ -241,7 +240,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 	event.Sheets["B"].Remains = 300
 	event.Sheets["C"].Remains = 500
 
-	rows, err := db.Query("SELECT * FROM sheets LEFT JOIN")
+	rows, err := db.Query("SELECT * FROM sheets")
 	if err != nil {
 		return nil, err
 	}
@@ -350,7 +349,6 @@ func main() {
 	e.GET("/", func(c echo.Context) error {
 		events, err := getEvents(false)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 		for i, v := range events {
