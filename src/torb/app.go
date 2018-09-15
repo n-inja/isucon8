@@ -195,6 +195,7 @@ func getEvents(all bool) ([]*Event, error) {
 
 	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
+		fmt.Println(err)
 		return nil, err
 	}
 	defer rows.Close()
