@@ -195,7 +195,7 @@ func getEvents(all bool) ([]*Event, error) {
 
 	rows, err := tx.Query("SELECT * FROM events ORDER BY id ASC")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("SELECT * FROM events ORDER BY id ASC")
 		return nil, err
 	}
 	defer rows.Close()
@@ -227,6 +227,7 @@ func getEvents(all bool) ([]*Event, error) {
 func getEvent(eventID, loginUserID int64) (*Event, error) {
 	var event Event
 	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
+		fmt.Println("SELECT * FROM events WHERE id = ?")
 		return nil, err
 	}
 	event.Sheets = map[string]*Sheets{
