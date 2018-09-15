@@ -361,7 +361,7 @@ func main() {
 		})
 	}, fillinUser)
 	e.GET("/initialize", func(c echo.Context) error {
-		cmd := exec.Command("db/init.sh")
+		cmd := exec.Command("/home/isucon/isucon8/db/init.sh")
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		err := cmd.Run()

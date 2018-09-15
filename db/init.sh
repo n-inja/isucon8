@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ROOT_DIR=$(cd $(dirname $0)/..; pwd)
-DB_DIR="$ROOT_DIR/db"
+DB_DIR="/home/isucon/isucon8/db"
 BENCH_DIR="$ROOT_DIR/bench"
 
 export MYSQL_PWD=isucon
