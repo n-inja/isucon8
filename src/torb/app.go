@@ -243,35 +243,27 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		"C": &Sheets{},
 	}
 
-	rows, err := db.Query("SELECT * FROM sheets")
+	rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations left join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-
 	for rows.Next() {
-		var sheet Sheet
-		if err := rows.Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
-			return nil, err
-		}
-		event.Sheets[sheet.Rank].Price = event.Price + sheet.Price
+		var s Sheet
+		var r Reservation
+		err := rows.Scan(&r.ID, &r.ReservedAt, &r.UserID, &s.ID, &s.Num, &s.Price, &s.Rank)
+		event.Sheets[s.Rank].Price = event.Price + s.Price
 		event.Total++
-		event.Sheets[sheet.Rank].Total++
-
-		var reservation Reservation
-		err := db.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id, sheet_id HAVING reserved_at = MIN(reserved_at)", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt)
+		event.Sheets[s.Rank].Total++
 		if err == nil {
-			sheet.Mine = reservation.UserID == loginUserID
-			sheet.Reserved = true
-			sheet.ReservedAtUnix = reservation.ReservedAt.Unix()
-		} else if err == sql.ErrNoRows {
-			event.Remains++
-			event.Sheets[sheet.Rank].Remains++
+			s.Mine = r.UserID == loginUserID
+			s.Reserved = true
+			s.ReservedAtUnix = r.ReservedAt.Unix()
 		} else {
-			return nil, err
+			event.Remains++
+			event.Sheets[s.Rank].Remains++
 		}
-
-		event.Sheets[sheet.Rank].Detail = append(event.Sheets[sheet.Rank].Detail, &sheet)
+		event.Sheets[s.Rank].Detail = append(event.Sheets[s.Rank].Detail, &s)
 	}
 
 	return &event, nil
