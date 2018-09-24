@@ -282,11 +282,13 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		return nil, err
 	}
 	event.Sheets = map[string]*Sheets{
-		"S": &Sheets{},
-		"A": &Sheets{},
-		"B": &Sheets{},
-		"C": &Sheets{},
+		"S": &Sheets{Remains: 50, Total: 50, Price: 5000 + event.Price, Detail: make([]*Sheet, 0)},
+		"A": &Sheets{Remains: 150, Total: 150, Price: 3000 + event.Price, Detail: make([]*Sheet, 0)},
+		"B": &Sheets{Remains: 300, Total: 300, Price: 1000 + event.Price, Detail: make([]*Sheet, 0)},
+		"C": &Sheets{Remains: 500, Total: 500, Price: 0 + event.Price, Detail: make([]*Sheet, 0)},
 	}
+	event.Total = 1000
+	event.Remains = 1000
 
 	rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations left join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num", eventID)
 	if err != nil {
@@ -297,16 +299,13 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		var s Sheet
 		var r Reservation
 		err := rows.Scan(&r.ID, &r.ReservedAt, &r.UserID, &s.ID, &s.Num, &s.Price, &s.Rank)
-		event.Sheets[s.Rank].Price = event.Price + s.Price
-		event.Total++
-		event.Sheets[s.Rank].Total++
 		if err == nil {
 			s.Mine = r.UserID == loginUserID
 			s.Reserved = true
 			s.ReservedAtUnix = r.ReservedAt.Unix()
 		} else {
-			event.Remains++
-			event.Sheets[s.Rank].Remains++
+			event.Remains--
+			event.Sheets[s.Rank].Remains--
 		}
 		event.Sheets[s.Rank].Detail = append(event.Sheets[s.Rank].Detail, &s)
 	}
