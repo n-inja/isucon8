@@ -499,8 +499,21 @@ func main() {
 		if user.ID != loginUser.ID {
 			return resError(c, "forbidden", 403)
 		}
+		/*
+type Event struct {
+	ID       int64  `json:"id,omitempty"`					o
+	Title    string `json:"title,omitempty"`				o
+	PublicFg bool   `json:"public,omitempty"`				o
+	ClosedFg bool   `json:"closed,omitempty"`				o
+	Price    int64  `json:"price,omitempty"`				o
 
-		rows, err := db.Query("SELECT r.*, s.rank AS sheet_rank, s.num AS sheet_num FROM reservations r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? ORDER BY IFNULL(r.canceled_at, r.reserved_at) DESC LIMIT 5", user.ID)
+	Total   int                `json:"total"`				x
+	Remains int                `json:"remains"`				x
+	Sheets  map[string]*Sheets `json:"sheets,omitempty"` 	x
+}
+		*/
+
+		rows, err := db.Query("SELECT r.*, s.rank AS sheet_rank, s.num AS sheet_num FROM (select reservations.*, events.price, events.closed_fg, events.public_fg, events.title from reservations inner join events on reservations.event_id = events.id having reservations.user_id = ?) r INNER JOIN sheets s ON s.id = r.sheet_id WHERE r.user_id = ? ORDER BY IFNULL(r.canceled_at, r.reserved_at) DESC LIMIT 5", user.ID, user.ID)
 		if err != nil {
 			return err
 		}
@@ -510,20 +523,31 @@ func main() {
 		for rows.Next() {
 			var reservation Reservation
 			var sheet Sheet
-			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &sheet.Rank, &sheet.Num); err != nil {
+			var event Event
+			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &event.Price, &event.ClosedFg, &event.PublicFg, event.Title, &sheet.Rank, &sheet.Num); err != nil {
 				return err
 			}
+			event.ID = reservation.EventID
 
-			event, err := getEvent(reservation.EventID, -1)
+			// event, err := getEvent(reservation.EventID, -1)
 			if err != nil {
 				return err
 			}
-			price := event.Sheets[sheet.Rank].Price
+			var price int64
+			if sheet.Rank == "S" {
+				price = event.Price + 5000
+			} else if sheet.Rank == "A" {
+				price = event.Price + 3000
+			} else if sheet.Rank == "B" {
+				price = event.Price + 1000
+			} else {
+				price = event.Price
+			}
 			event.Sheets = nil
 			event.Total = 0
 			event.Remains = 0
 
-			reservation.Event = event
+			reservation.Event = &event
 			reservation.SheetRank = sheet.Rank
 			reservation.SheetNum = sheet.Num
 			reservation.Price = price
