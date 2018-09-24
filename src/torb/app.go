@@ -317,6 +317,37 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 	return &event, nil
 }
 
+func getEventWithoutDetail(eventID int64) (*Event, error) {
+	var event Event
+	if err := db.QueryRow("SELECT * FROM events WHERE id = ?", eventID).Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
+		return nil, err
+	}
+	event.Sheets = map[string]*Sheets{
+		"S": &Sheets{Remains: 50, Total: 50, Price: 5000 + event.Price, Detail: make([]*Sheet, 0)},
+		"A": &Sheets{Remains: 150, Total: 150, Price: 3000 + event.Price, Detail: make([]*Sheet, 0)},
+		"B": &Sheets{Remains: 300, Total: 300, Price: 1000 + event.Price, Detail: make([]*Sheet, 0)},
+		"C": &Sheets{Remains: 500, Total: 500, Price: 0 + event.Price, Detail: make([]*Sheet, 0)},
+	}
+	event.Total = 1000
+	event.Remains = 1000
+
+	// rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations right join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num", eventID)
+	rows, err := db.Query("select s.rank, count(*) from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) r left join sheets s on r.sheet_id = s.id group by s.rank", eventID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var rank string
+		var c int
+		rows.Scan(&rank, &c)
+		event.Remains -= c
+		event.Sheets[rank].Remains -= c
+	}
+
+	return &event, nil
+}
+
 func sanitizeEvent(e *Event) *Event {
 	sanitized := *e
 	sanitized.Price = 0
@@ -523,12 +554,18 @@ func main() {
 			if err := rows.Scan(&eventID); err != nil {
 				return err
 			}
+			/*
 			event, err := getEvent(eventID, -1)
 			if err != nil {
 				return err
 			}
 			for k := range event.Sheets {
 				event.Sheets[k].Detail = nil
+			}
+			*/
+			event, err := getEventWithoutDetail(eventID)
+			if err != nil {
+				return err
 			}
 			recentEvents = append(recentEvents, event)
 		}
