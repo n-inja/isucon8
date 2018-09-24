@@ -524,7 +524,7 @@ type Event struct {
 			var reservation Reservation
 			var sheet Sheet
 			var event Event
-			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &event.Price, &event.ClosedFg, &event.PublicFg, event.Title, &sheet.Rank, &sheet.Num); err != nil {
+			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &event.Price, &event.ClosedFg, &event.PublicFg, &event.Title, &sheet.Rank, &sheet.Num); err != nil {
 				fmt.Println(err)
 				return err
 			}
