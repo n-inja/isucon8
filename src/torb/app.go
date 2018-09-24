@@ -837,6 +837,7 @@ func main() {
 		}
 		event, err := getEvent(eventID, -1)
 		if err != nil {
+			fmt.Println(err)
 			if err == sql.ErrNoRows {
 				return resError(c, "not_found", 404)
 			}
