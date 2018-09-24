@@ -290,22 +290,26 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 	event.Total = 1000
 	event.Remains = 1000
 
-	rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations left join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num", eventID)
+	rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations right join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num", eventID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	for rows.Next() {
+		var rid, uid sql.NullInt64
 		var s Sheet
 		var r Reservation
-		err := rows.Scan(&r.ID, &r.ReservedAt, &r.UserID, &s.ID, &s.Num, &s.Price, &s.Rank)
-		if err == nil {
+		rows.Scan(&rid, &r.ReservedAt, &uid, &s.ID, &s.Num, &s.Price, &s.Rank)
+		if rid.Valid {
+			event.Remains--
+			event.Sheets[s.Rank].Remains--
+			r.ID = rid.Int64
+			r.UserID = uid.Int64
 			s.Mine = r.UserID == loginUserID
 			s.Reserved = true
 			s.ReservedAtUnix = r.ReservedAt.Unix()
 		} else {
-			event.Remains--
-			event.Sheets[s.Rank].Remains--
+			s.Reserved = false
 		}
 		event.Sheets[s.Rank].Detail = append(event.Sheets[s.Rank].Detail, &s)
 	}
