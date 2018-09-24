@@ -195,6 +195,44 @@ func getEvents(all bool) ([]*Event, error) {
 
 	var rows *sql.Rows
 
+	r, err := tx.Query("select * from events")
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	eventMap := make(map[int64]*Event, 0)
+	for r.Next() {
+		var e Event
+		r.Scan(&e.ID, &e.Title, &e.PublicFg, &e.ClosedFg, &e.Price)
+		e.Total = 1000
+		e.Remains = 1000
+		e.Sheets = make(map[string]*Sheets, 0)
+		eventMap[e.ID] = &e
+	}
+	rows, err = tx.Query("select e.id, count(*) from events e left join (select * from reservations where canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) r on e.id = r.event_id group by r.event_id")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var ID int64
+		var c int
+		rows.Scan(&ID, &c)
+		eventMap[ID].Remains -= c
+	}
+	var events []*Event
+	for _, v := range eventMap {
+		if !all && !v.PublicFg {
+			continue
+		}
+		events = append(events, v)
+	}
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].ID < events[j].ID
+	})
+	return events, nil
+
+	/*
 	if all {
 		rows, err = tx.Query("SELECT * FROM events ORDER BY id ASC")
 	} else {
@@ -206,7 +244,6 @@ func getEvents(all bool) ([]*Event, error) {
 	}
 	defer rows.Close()
 
-	var events []*Event
 	for rows.Next() {
 		var event Event
 		if err := rows.Scan(&event.ID, &event.Title, &event.PublicFg, &event.ClosedFg, &event.Price); err != nil {
@@ -229,6 +266,7 @@ func getEvents(all bool) ([]*Event, error) {
 		events[i] = event
 	}
 	return events, nil
+	*/
 }
 
 func getEvent(eventID, loginUserID int64) (*Event, error) {
