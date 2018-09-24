@@ -288,7 +288,7 @@ func getEvent(eventID, loginUserID int64) (*Event, error) {
 		"C": &Sheets{},
 	}
 
-	rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations left join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num")
+	rows, err := db.Query("select reservations.id, reservations.reserved_at, reservations.user_id, sheets.id, sheets.num, sheets.price, sheets.rank from (select * from reservations where event_id = ? and canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) reservations left join sheets on reservations.sheet_id = sheets.id ORDER BY `rank`, num", eventID)
 	if err != nil {
 		return nil, err
 	}
@@ -837,7 +837,6 @@ func main() {
 		}
 		event, err := getEvent(eventID, -1)
 		if err != nil {
-			fmt.Println(err)
 			if err == sql.ErrNoRows {
 				return resError(c, "not_found", 404)
 			}
