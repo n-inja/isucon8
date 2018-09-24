@@ -207,10 +207,10 @@ func getEvents(all bool) ([]*Event, error) {
 		e.Total = 1000
 		e.Remains = 1000
 		e.Sheets = map[string]*Sheets{
-			"S": &Sheets{Remains: 50, Total: 50, Price: 5000, Detail: make([]*Sheet, 0)},
-			"A": &Sheets{Remains: 150, Total: 150, Price: 3000, Detail: make([]*Sheet, 0)},
-			"B": &Sheets{Remains: 300, Total: 300, Price: 1000, Detail: make([]*Sheet, 0)},
-			"C": &Sheets{Remains: 500, Total: 500, Price: 0, Detail: make([]*Sheet, 0)},
+			"S": &Sheets{Remains: 50, Total: 50, Price: 5000 + e.Price, Detail: make([]*Sheet, 0)},
+			"A": &Sheets{Remains: 150, Total: 150, Price: 3000 + e.Price, Detail: make([]*Sheet, 0)},
+			"B": &Sheets{Remains: 300, Total: 300, Price: 1000 + e.Price, Detail: make([]*Sheet, 0)},
+			"C": &Sheets{Remains: 500, Total: 500, Price: 0 + e.Price, Detail: make([]*Sheet, 0)},
 		}
 		eventMap[e.ID] = &e
 	}
