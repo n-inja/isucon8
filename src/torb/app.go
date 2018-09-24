@@ -202,7 +202,6 @@ func getEvents(all bool) ([]*Event, error) {
 	}
 
 	if err != nil {
-		fmt.Println("SELECT * FROM events ORDER BY id ASC")
 		return nil, err
 	}
 	defer rows.Close()
@@ -223,9 +222,10 @@ func getEvents(all bool) ([]*Event, error) {
 		if err != nil {
 			return nil, err
 		}
-		for k := range event.Sheets {
-			event.Sheets[k].Detail = nil
-		}
+		event.Sheets = make(map[string]*Sheets, 0)
+		// for k := range event.Sheets {
+		// 	event.Sheets[k].Detail = nil
+		// }
 		events[i] = event
 	}
 	return events, nil
