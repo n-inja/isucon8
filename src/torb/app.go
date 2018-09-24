@@ -525,12 +525,14 @@ type Event struct {
 			var sheet Sheet
 			var event Event
 			if err := rows.Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt, &event.Price, &event.ClosedFg, &event.PublicFg, event.Title, &sheet.Rank, &sheet.Num); err != nil {
+				fmt.Println(err)
 				return err
 			}
 			event.ID = reservation.EventID
 
 			// event, err := getEvent(reservation.EventID, -1)
 			if err != nil {
+				fmt.Println(err)
 				return err
 			}
 			var price int64
