@@ -375,6 +375,7 @@ func fillinAdministrator(next echo.HandlerFunc) echo.HandlerFunc {
 }
 
 func validateRank(rank string) bool {
+	return rank == "S" || rank == "A" || rank == "B" || rank == "C"
 	var count int
 	db.QueryRow("SELECT COUNT(*) FROM sheets WHERE `rank` = ?", rank).Scan(&count)
 	return count > 0
@@ -770,13 +771,46 @@ type Event struct {
 			return resError(c, "invalid_rank", 404)
 		}
 
+		var intNum int
+		var intNum64 int64
+		intNum, err = strconv.Atoi(num)
+		intNum64 = int64(intNum)
+		if err != nil {
+			return resError(c, "invalid_sheet", 404)
+		}
+
 		var sheet Sheet
+		sheet.Rank = rank
+		if rank == "S" {
+			sheet.ID = intNum64
+			if intNum64 < 1 || intNum64 > 50 {
+				return resError(c, "invalid_sheet", 404)
+			}
+		} else if rank == "A" {
+			sheet.ID = intNum64 + 50
+			if intNum64 < 1 || intNum64 > 150 {
+				return resError(c, "invalid_sheet", 404)
+			}
+		} else if rank == "B" {
+			sheet.ID = intNum64 + 200
+			if intNum64 < 1 || intNum64 > 300 {
+				return resError(c, "invalid_sheet", 404)
+			}
+		} else {
+			sheet.ID = intNum64 + 500
+			if intNum64 < 1 || intNum64 > 500 {
+				return resError(c, "invalid_sheet", 404)
+			}
+		}
+
+		/*
 		if err := db.QueryRow("SELECT * FROM sheets WHERE `rank` = ? AND num = ?", rank, num).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 			if err == sql.ErrNoRows {
 				return resError(c, "invalid_sheet", 404)
 			}
 			return err
 		}
+		*/
 
 		tx, err := db.Begin()
 		if err != nil {
@@ -784,7 +818,8 @@ type Event struct {
 		}
 
 		var reservation Reservation
-		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
+		// if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
+		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at)", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
 			tx.Rollback()
 			if err == sql.ErrNoRows {
 				return resError(c, "not_reserved", 400)
