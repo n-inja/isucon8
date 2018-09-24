@@ -206,10 +206,15 @@ func getEvents(all bool) ([]*Event, error) {
 		r.Scan(&e.ID, &e.Title, &e.PublicFg, &e.ClosedFg, &e.Price)
 		e.Total = 1000
 		e.Remains = 1000
-		e.Sheets = make(map[string]*Sheets, 0)
+		e.Sheets = map[string]*Sheets{
+			"S": &Sheets{Remains: 50, Total: 50, Price: 5000, Detail: make([]*Sheet, 0)},
+			"A": &Sheets{Remains: 150, Total: 150, Price: 3000, Detail: make([]*Sheet, 0)},
+			"B": &Sheets{Remains: 300, Total: 300, Price: 1000, Detail: make([]*Sheet, 0)},
+			"C": &Sheets{Remains: 500, Total: 500, Price: 0, Detail: make([]*Sheet, 0)},
+		}
 		eventMap[e.ID] = &e
 	}
-	rows, err = tx.Query("select e.id, count(*) from events e left join (select * from reservations where canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) r on e.id = r.event_id group by r.event_id")
+	rows, err = tx.Query("select e.id, sheets.rank, count(*) from events e left join (select * from reservations where canceled_at is null group by event_id, sheet_id having reserved_at = min(reserved_at)) r on e.id = r.event_id inner join sheets on r.sheet_id = sheets.id group by r.event_id, sheets.rank")
 	if err != nil {
 		return nil, err
 	}
@@ -217,8 +222,10 @@ func getEvents(all bool) ([]*Event, error) {
 	for rows.Next() {
 		var ID int64
 		var c int
-		rows.Scan(&ID, &c)
+		var rank string
+		rows.Scan(&ID, &rank, &c)
 		eventMap[ID].Remains -= c
+		eventMap[ID].Sheets[rank].Remains -= c
 	}
 	var events []*Event
 	for _, v := range eventMap {
@@ -394,7 +401,6 @@ func main() {
 		})
 	}, fillinUser)
 	e.GET("/initialize", func(c echo.Context) error {
-		fmt.Println("a")
 		cmd := exec.Command("/home/isucon/isucon8/db/init.sh")
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
