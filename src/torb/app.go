@@ -824,6 +824,11 @@ type Event struct {
 		if err != nil {
 			return err
 		}
+		if mm[eventID] == nil {
+			mm[eventID] = new(sync.Mutex)
+		}
+		mm[eventID].Lock()
+		defer mm[eventID].Unlock()
 
 		var reservation Reservation
 		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
