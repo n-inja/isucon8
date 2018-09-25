@@ -9,7 +9,6 @@ import (
 	"html/template"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"os/exec"
 	"sort"
