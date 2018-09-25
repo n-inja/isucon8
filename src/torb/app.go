@@ -18,7 +18,6 @@ import (
 	"sync"
 	"time"
 
-	_ "net/http/pprof"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo"
@@ -398,9 +397,6 @@ func main() {
 	for i := 0; i < 100; i++ {
 		mm[int64(i)] = new(sync.Mutex)
 	}
-	go func() {
-		http.ListenAndServe(":6060", nil)
-	}()
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
 		os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
