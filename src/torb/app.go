@@ -397,6 +397,7 @@ func main() {
 	for i := 0; i < 500; i++ {
 		mm[int64(i)] = new(sync.Mutex)
 	}
+	rankMap = make(map[string]int64)
 	rankMap["S"] = int64(0)
 	rankMap["A"] = int64(1)
 	rankMap["B"] = int64(2)
