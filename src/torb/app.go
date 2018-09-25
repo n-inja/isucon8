@@ -395,7 +395,7 @@ var db *sql.DB
 
 func main() {
 	mm = make(map[int64]*sync.Mutex, 0)
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 100; i++ {
 		mm[int64(i)] = new(sync.Mutex)
 	}
 	go func() {
