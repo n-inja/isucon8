@@ -708,8 +708,9 @@ type Event struct {
 
 		var sheet Sheet
 		var reservationID int64
+		m.Lock()
+		defer m.Unlock()
 		for {
-			m.Lock()
 			if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at IS NULL FOR UPDATE) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 				if err == sql.ErrNoRows {
 					return resError(c, "sold_out", 409)
@@ -739,7 +740,6 @@ type Event struct {
 				log.Println("re-try: rollback by", err)
 				continue
 			}
-			m.Unlock()
 
 			break
 		}
