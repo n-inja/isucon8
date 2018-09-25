@@ -86,6 +86,7 @@ type Administrator struct {
 	PassHash  string `json:"pass_hash,omitempty"`
 }
 var mm map[int64]*sync.Mutex
+var rankMap map[string]int64
 
 func sessUserID(c echo.Context) int64 {
 	sess, _ := session.Get("session", c)
@@ -394,9 +395,13 @@ var db *sql.DB
 
 func main() {
 	mm = make(map[int64]*sync.Mutex, 0)
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 500; i++ {
 		mm[int64(i)] = new(sync.Mutex)
 	}
+	rankMap["S"] = int64(0)
+	rankMap["A"] = int64(1)
+	rankMap["B"] = int64(2)
+	rankMap["C"] = int64(3)
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
 		os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
@@ -708,11 +713,12 @@ type Event struct {
 
 		var sheet Sheet
 		var reservationID int64
-		if mm[eventID] == nil {
-			mm[eventID] = new(sync.Mutex)
+		key := eventID * 4 + rankMap[params.Rank]
+		if mm[key] == nil {
+			mm[key] = new(sync.Mutex)
 		}
-		mm[eventID].Lock()
-		defer mm[eventID].Unlock()
+		mm[key].Lock()
+		defer mm[key].Unlock()
 		for {
 			if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at IS NULL FOR UPDATE) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 				if err == sql.ErrNoRows {
@@ -824,11 +830,12 @@ type Event struct {
 		if err != nil {
 			return err
 		}
-		if mm[eventID] == nil {
-			mm[eventID] = new(sync.Mutex)
+		key := eventID * 4 + rankMap[rank]
+		if mm[key] == nil {
+			mm[key] = new(sync.Mutex)
 		}
-		mm[eventID].Lock()
-		defer mm[eventID].Unlock()
+		mm[key].Lock()
+		defer mm[key].Unlock()
 
 		var reservation Reservation
 		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
