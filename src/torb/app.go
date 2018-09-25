@@ -676,7 +676,7 @@ type Event struct {
 		}
 		return c.JSON(200, sanitizeEvent(event))
 	})
-	mm := make(map[int64]*sync.Mutex, 0)
+	mm := make(map[string]*sync.Mutex, 0)
 	e.POST("/api/events/:id/actions/reserve", func(c echo.Context) error {
 		eventID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 		if err != nil {
@@ -708,11 +708,12 @@ type Event struct {
 
 		var sheet Sheet
 		var reservationID int64
-		if mm[eventID] == nil {
-			mm[eventID] = new(sync.Mutex)
+		key := c.Param("id") + params.Rank
+		if mm[key] == nil {
+			mm[key] = new(sync.Mutex)
 		}
-		mm[eventID].Lock()
-		defer mm[eventID].Unlock()
+		mm[key].Lock()
+		defer mm[key].Unlock()
 		for {
 			if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at IS NULL FOR UPDATE) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 				if err == sql.ErrNoRows {
@@ -824,11 +825,12 @@ type Event struct {
 		if err != nil {
 			return err
 		}
-		if mm[eventID] == nil {
-			mm[eventID] = new(sync.Mutex)
+		key := c.Param("id") + rank
+		if mm[key] == nil {
+			mm[key] = new(sync.Mutex)
 		}
-		mm[eventID].Lock()
-		defer mm[eventID].Unlock()
+		mm[key].Lock()
+		defer mm[key].Unlock()
 
 		var reservation Reservation
 		if err := tx.QueryRow("SELECT * FROM reservations WHERE event_id = ? AND sheet_id = ? AND canceled_at IS NULL GROUP BY event_id HAVING reserved_at = MIN(reserved_at) FOR UPDATE", event.ID, sheet.ID).Scan(&reservation.ID, &reservation.EventID, &reservation.SheetID, &reservation.UserID, &reservation.ReservedAt, &reservation.CanceledAt); err != nil {
