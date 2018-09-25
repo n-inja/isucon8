@@ -401,6 +401,7 @@ func main() {
 		os.Getenv("DB_HOST"), os.Getenv("DB_PORT"),
 		os.Getenv("DB_DATABASE"),
 	)
+	dsn = "isucon:isucon@unix(/var/lib/mysql/mysql.sock)/torb?parseTime=true&charset=utf8mb4"
 
 	var err error
 	db, err = sql.Open("mysql", dsn)
