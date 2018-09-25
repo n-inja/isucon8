@@ -676,7 +676,7 @@ type Event struct {
 		}
 		return c.JSON(200, sanitizeEvent(event))
 	})
-	m := new(sync.Mutex)
+	mm := make(map[int64]*sync.Mutex, 0)
 	e.POST("/api/events/:id/actions/reserve", func(c echo.Context) error {
 		eventID, err := strconv.ParseInt(c.Param("id"), 10, 64)
 		if err != nil {
@@ -708,8 +708,11 @@ type Event struct {
 
 		var sheet Sheet
 		var reservationID int64
-		m.Lock()
-		defer m.Unlock()
+		if mm[eventID] == nil {
+			mm[eventID] = new(sync.Mutex)
+		}
+		mm[eventID].Lock()
+		defer mm[eventID].Unlock()
 		for {
 			if err := db.QueryRow("SELECT * FROM sheets WHERE id NOT IN (SELECT sheet_id FROM reservations WHERE event_id = ? AND canceled_at IS NULL FOR UPDATE) AND `rank` = ? ORDER BY RAND() LIMIT 1", event.ID, params.Rank).Scan(&sheet.ID, &sheet.Rank, &sheet.Num, &sheet.Price); err != nil {
 				if err == sql.ErrNoRows {
